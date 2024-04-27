@@ -3,8 +3,6 @@ import requests  # pip install requests
 import logging
 import random
 
-# window.Telegram.WebApp.initData
-init_data = ''
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -17,6 +15,9 @@ def recovery_energy(energy):
 
 
 if __name__ == '__main__':
+    with open('init_data.txt', 'r') as init_data_file:
+        init_data = init_data_file.readline()
+
     auth_response = requests.post(
         'https://server.questioncube.xyz/auth',
         json={
@@ -39,16 +40,21 @@ if __name__ == '__main__':
         recovery_energy(energy)
 
     while True:
-        mined_response = requests.post(
-            'https://server.questioncube.xyz/game/mined',
-            json={
-                'token': user_data['token']
-            },
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0',
-                'Referer': 'https://www.thecubes.xyz/'
-            }
-        )
+        try:
+            mined_response = requests.post(
+                'https://server.questioncube.xyz/game/mined',
+                json={
+                    'token': user_data['token']
+                },
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0',
+                    'Referer': 'https://www.thecubes.xyz/'
+                }
+            )
+        except Exception as e:
+            logging.error(f'Mined request exception: {e}')
+            time.sleep(10)
+            continue
 
         if mined_response.status_code != 200:
             if mined_response.text == '???????????????':
