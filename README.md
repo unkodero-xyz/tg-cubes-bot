@@ -8,7 +8,7 @@ Bot for Telegram [Cubes? game](https://t.me/cubesonthewater_bot?start=OTE0ODI1Mz
 
 ### Usage:
 1. `pip install requests`
-2. Create `init_data.txt` file and fill it with init data from game WebView (copy string from `window.Telegram.WebApp.initData` in DevTools console)
+2. Create `init_data.txt` file and fill it with init data from game WebView (copy string from `window.Telegram.WebApp.initData` in DevTools console). Multithreading is available!
 3. `python app.py`
 
 [@MDSays](https://t.me/mdsays)
