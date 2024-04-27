@@ -64,7 +64,7 @@ class Worker(threading.Thread):
                     time.sleep(5)
                     continue
 
-                if mined_response.text == 'Not enough energy':
+                if mined_response.text == 'Not enough energy' or mined_response == '? banned ?':
                     self.recovery_energy(energy)
                     continue
 
