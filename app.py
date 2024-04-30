@@ -64,9 +64,12 @@ class Worker(threading.Thread):
                     time.sleep(5)
                     continue
 
-                if mined_response.text == 'Not enough energy' or mined_response == '? banned ?':
+                if mined_response.text == 'Not enough energy' or mined_response.text == '? banned ?':
                     self.recovery_energy(energy)
                     continue
+
+                if mined_response.text == 'Token not found':
+                    return self.run()
 
                 logging.error(f'[{self.id}] Mined request failed: {mined_response.text}')
                 time.sleep(5)
