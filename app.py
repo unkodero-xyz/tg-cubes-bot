@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 import random
 import time
 import requests  # pip install requests
@@ -11,10 +12,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 
 class Worker(threading.Thread):
-    def __init__(self, id, init_data):
+    def __init__(self, id, init_data, proxy):
         super(Worker, self).__init__()
         self.id = id
         self.init_data = init_data
+        self.proxy = proxy
 
         parsed_init_data = parse_qs(self.init_data, strict_parsing=True)
         user_data = json.loads(parsed_init_data['user'][0])
@@ -39,21 +41,34 @@ class Worker(threading.Thread):
             'Referer': 'https://www.thecubes.xyz/'
         }
 
-        auth_response = requests.post(
-            'https://server.questioncube.xyz/auth',
-            json={
-                'initData': self.init_data
-            },
-            headers=headers
-        )
+        proxies = None
+        if self.proxy is not None:
+            proxies = {
+                'http': self.proxy,
+                'https': self.proxy
+            }
+
+        try:
+            auth_response = requests.post(
+                'https://server.questioncube.xyz/auth',
+                json={
+                    'initData': self.init_data
+                },
+                headers=headers,
+                proxies=proxies
+            )
+        except Exception as e:
+            logging.error(f'[{self.id}] [{self.full_name}] Auth request exception: {e}')
+            time.sleep(10)
+            return self.run()
 
         if auth_response.status_code != 200:
             logging.error(f'[{self.id}] [{self.full_name}] Auth request failed: {auth_response.text}')
             return
 
         user_data = auth_response.json()
-        energy = user_data['energy']
-        drops_amount = user_data['drops_amount']
+        energy = int(user_data['energy'])
+        drops_amount = int(user_data['drops_amount'])
 
         if user_data['banned_until_restore'] == 'true':
             self.recovery_energy(energy)
@@ -65,7 +80,8 @@ class Worker(threading.Thread):
                     json={
                         'token': user_data['token']
                     },
-                    headers=headers
+                    headers=headers,
+                    proxies=proxies
                 )
             except Exception as e:
                 logging.error(f'[{self.id}] [{self.full_name}] Mined request exception: {e}')
@@ -80,7 +96,7 @@ class Worker(threading.Thread):
 
                 if mined_response.text == 'Not enough energy':
                     now = datetime.datetime.now()
-                    if not (drops_amount >= 500 and 2 <= now.hour <= 6):
+                    if not (drops_amount >= 500 and 2 <= now.hour <= 7):
                         self.recovery_energy(energy)
                         continue
                     else:
@@ -94,7 +110,8 @@ class Worker(threading.Thread):
                                         'token': user_data['token'],
                                         'proposal_id': 4
                                     },
-                                    headers=headers
+                                    headers=headers,
+                                    proxies=proxies
                                 )
 
                                 buy_data = buy_response.json()
@@ -127,8 +144,28 @@ class Worker(threading.Thread):
 
 
 if __name__ == '__main__':
+    use_proxy = False
+
+    if os.path.isfile('proxies.txt'):
+        logging.info('Loading proxy')
+        with open('proxies.txt') as proxies_file:
+            proxies = proxies_file.readlines()
+            use_proxy = True
+
+    proxy_line = 0
+
     with open('init_data.txt', 'r') as init_data_file:
         line = 0
         for init_data in init_data_file:
             line += 1
-            Worker(line, init_data.strip()).start()
+
+            p = None
+            if use_proxy:
+                p = proxies[proxy_line].strip()
+
+            Worker(line, init_data.strip(), p).start()
+
+            if use_proxy:
+                proxy_line +=1
+                if len(proxies) <= proxy_line:
+                    proxy_line = 0
